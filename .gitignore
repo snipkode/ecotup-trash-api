@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.tflite
+*.h5
+*.keras
+.env
