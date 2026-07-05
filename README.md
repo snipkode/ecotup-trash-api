@@ -61,6 +61,64 @@ docker run -d \
   ecotup-trash-api:latest
 ```
 
+## Performance (Server Benchmark)
+
+Diukur langsung di server produksi dengan 10 request berturut-turut.
+
+**Spesifikasi Server:**
+| Komponen | Detail |
+|----------|--------|
+| CPU | Intel Xeon Gold 6231C @ 3.20GHz (2 vCPU) |
+| RAM | 1.9 GB total / ~800 MB available |
+| Inference | CPU only (no GPU) |
+
+**Hasil Benchmark — `POST /predict` (10 requests):**
+
+| Request | Waktu |
+|---------|-------|
+| #1 (cold start) | 245 ms |
+| #2 | 199 ms |
+| #3 | 201 ms |
+| #4 | 211 ms |
+| #5 | 202 ms |
+| #6 | 206 ms |
+| #7 | 201 ms |
+| #8 | 198 ms |
+| #9 | 202 ms |
+| #10 | 196 ms |
+
+**Ringkasan:**
+| Metrik | Nilai |
+|--------|-------|
+| Cold start (pertama) | ~245 ms |
+| Rata-rata (steady) | ~201 ms |
+| Minimum | ~196 ms |
+| Maximum (steady) | ~211 ms |
+
+> **Catatan:** Request pertama sedikit lebih lambat karena JIT warm-up XNNPACK delegate. Request berikutnya stabil di ~200ms.
+
+**Breakdown waktu per tahap (estimasi):**
+```
+Upload gambar ke server    :  ~5–20 ms  (tergantung ukuran & jaringan)
+Preprocessing (resize+norm):  ~10–20 ms
+Sigmoid inference          :  ~80–100 ms
+Softmax inference (jika    :  ~80–100 ms  (hanya jika Anorganik)
+  Anorganik)
+JSON serialization         :  <1 ms
+────────────────────────────────────────
+Total Organik              :  ~150–170 ms
+Total Anorganik            :  ~200–220 ms
+```
+
+**Perbandingan dengan on-device (Android):**
+| | On-device (TFLite Android) | Flask API (server) |
+|-|---------------------------|-------------------|
+| Latency | ~50–150 ms | ~200 ms + network |
+| Internet | Tidak perlu | Wajib |
+| RAM HP | ~200 MB | 0 |
+| RAM Server | 0 | ~400 MB |
+| Cocok untuk | Real-time scan | Integrasi backend/web |
+
 ## Dependencies
 
 - Flask 3.0.0
